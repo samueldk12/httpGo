@@ -1,37 +1,41 @@
 package main
 
 import (
-	"context"
 	"fmt"
-	"io"
 	"net/http"
 	"time"
 )
 
+func Log(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request){
+		begin := time.Now()
+		next.ServeHTTP(w, r)
+		fmt.Fprintln(w, r.Method, time.Since(begin))
+	})
+}
+
 func main() {
-	ctx := context.Background()
+	mux := http.NewServeMux()
 
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	mux.HandleFunc(
+		"/api/users/{id}",
+		func(w http.ResponseWriter, r *http.Request){
+			id := r.PathValue("id")
+			fmt.Fprintln(w, id)
+			fmt.Fprintln(w, "Hello World!")
+		},
+	)
 
-	defer cancel()
-	
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "http://ondetrabalho.com.br", nil)
-	
-	if err != nil {
-		panic(err)
+
+	srv := &http.Server{
+		Addr:                         ":8080",
+		Handler:                      Log(mux),
+		DisableGeneralOptionsHandler: false,
+		ReadTimeout:                  10 * time.Second,
+		WriteTimeout:                 30 * time.Second,
+		IdleTimeout:                  1 * time.Minute,
 	}
 
-	resp, err := http.DefaultClient.Do(req)
 
-	if err != nil{
-		panic(err)
-	}
-
-	data, err := io.ReadAll(resp.Body)
-	
-	if err != nil{
-		panic(err)
-	}
-	
-	fmt.Println(string(data))
+	srv.ListenAndServe()
 }

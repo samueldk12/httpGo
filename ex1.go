@@ -14,7 +14,7 @@ func Log(next http.Handler) http.Handler {
 	})
 }
 
-func main() {
+func ex1() {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc(
